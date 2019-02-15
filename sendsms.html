@@ -1,0 +1,283 @@
+<html>
+<html lang="en-US" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<title>Twilio SMS</title>
+
+<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400,600,700" rel="stylesheet">
+<link href="../css/select2.min.css" rel="stylesheet" type="text/css">
+<link href="../css/sendsms.css" rel="stylesheet" type="text/css">
+<script type="text/javascript" src="../lib/jquery-1.11.0.min.js"></script>
+<script type="text/javascript" src="../lib/handlebars.js"></script>
+<script type="text/javascript" src="../lib/ZohoEmbededAppSDK.min.js"></script>
+<script type="text/javascript" src="../js/select2.min.js"></script>
+<script type="text/javascript" src="../js/sendsms.js"></script>
+
+<script type="text/javascript">
+    
+    $(document).ready(function() {
+
+        Handlebars.registerHelper('equal', function(lvalue, rvalue, options) {
+            if (arguments.length < 3)
+                throw new Error("Handlebars Helper equal needs 2 parameters");
+            if( lvalue!=rvalue ) {
+                return false ;
+            } else {
+                return true ; 
+            }
+        });
+
+        Handlebars.registerHelper('checkModule', function(lvalue, options) {
+            if( lvalue!=entity ) {
+                return false ;
+            } else {
+                return true ;   
+            }
+        });
+
+    });
+
+</script>
+
+</head>
+
+<body>
+
+<div class="popapulbge dT" id="successMsg" style="position: fixed;display: none;">   
+    <div class="success" style="margin-left: 30%;position: fixed;padding: 9px;border: 2px solid #e2e2e2;">
+        <span class="iconbox"><span class="successicon"></span></span>
+        <span class="sucesText f16 fR">Template Created Successfully</span>
+        <span class="clo-icon">&nbsp;</span>
+    </div>
+</div>
+
+<div id="create" style="display: none;">
+    <div class="maindiv">
+        <div class="popupPageTitle pL30 pR30">
+          New Template
+        </div>
+        <div class="pageContent mL20">
+            <form id="template_form" method="post" class="form-style" onsubmit="return false;" enctype="multipart/form-data">
+                <div id="printPreviewPop" class="whiteBg" style="margin: 0 auto;">
+                <div class="inner-section">
+                    <table class="table-form">
+                        <tbody>
+                            <tr>
+                              <td>
+                                <label style="font-size: 16px;">Template Name</label>
+                              </td>
+                              <td>
+                                <input type="text" id="templateName" required="This field cannot be left empty" style="width:100%;margin-right:260px;"/>
+                                <div style="float:left; display: none;font-size: 10px;color: rgb(255,0,0);padding-left: 300px;" id="tempNameEmptyDiv">This field cannot be left empty.</div>
+                              </td>
+                            </tr>
+                            <tr>
+                                <td><label style="font-size: 16px;">CRM Module</label></td>
+                                <td>
+                                    <select id="crm_module" style="margin-right:260px;" onchange="changeFields()">
+                                        <option value="Leads" selected>Leads</option>
+                                        <option value="Contacts">Contacts</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr class="smstemp">
+                                <td colspan="2">
+                                    <div class="msg-container">
+                                        <div class="msg-header">Message
+                                            <div class="newSelect" id="fieldnames"></div>
+                                            <script id="fieldsList" type="text/x-handlebars-template">
+                                                <select id="insert_fields" onchange="addFields()" class="insert-fields" style="border-bottom: 1px solid #cecece;position:relative;bottom: 20px;">
+                                                    <option id="none">Insert Fields</option>
+                                                    {{#each fields}}
+                                                        <option>{{api_name}}</option>
+                                                    {{/each}}
+                                                </select>
+                                            </script> 
+                                            </div>
+
+                                        <div class="msg-body">
+                                        <textarea class="msgBox" id="templateTxt" style="border: 0px; padding: 5px; width: 588px; height: 105px; margin: 0px; z-index: auto; position: relative; line-height: normal; font-size: 14px; transition: none; background: transparent !important;"></textarea>
+                                        <div style="float:left; display: none;font-size: 10px;color: rgb(255,0,0);" id="templateEmptyAlert">This field cannot be left empty.</div>
+                                        <div class="msg-footer">&nbsp;</div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+            
+                            <tr>
+                                <td colspan="2">
+                                    <div class="fR">
+                                    <div class="link">
+                                            <input type="button" value="Cancel" onclick="skip()" class="btn normalbtn cancelbtn">
+                                            <input type="button" value="Save" onclick="update()" class="btn primarybtn sendbtn">
+                                    </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </form>
+        <div class="error_msg" id="error_msg" style="display:none">
+            <ul style="padding:0; margin:0" id="errors"></ul>
+        </div>
+    </div>
+    </div>
+    </div>
+
+
+
+    <div class="maindiv">
+        <div class="pageContent" style="margin-left:20px;">
+            <form id="sendsms_form" method="post" class="form-style" onsubmit="return false;" enctype="multipart/form-data">
+            <div id="getTemp">
+                <div id="printPreviewPop" class="whiteBg" style="margin: 0 auto;">
+                    <div class="inner-section">
+                        <table class="table-form">
+                            <tbody>
+                                <tr>
+                                    <td><label>From</label></td>
+                                    <td>
+                                    <div id="listNumbers" class="newSelect"></div>
+                                            <script type="text/x-handlebars-template" id="fromNum">
+                                            <select id="from_number">
+                                                {{#unless incoming_phone_numbers}}
+                                                    <option>No Phone Numbers Found</option>
+                                                {{/unless}}
+                                                {{#each incoming_phone_numbers}}
+                                                    <option value={{phone_number}}>
+                                                    {{friendly_name}} : {{phone_number}}
+                                                    </option>
+                                                {{/each}}
+                                            </select>
+                                            </script>                            
+                                    </td>
+                                </tr>          
+                                <tr>
+                                    <td><label>To</label></td>
+                                    <td>
+                                        <div class="recipient-field">
+                                            <div>
+                                                <select id="recipients" class="contact" multiple="true"></select>
+                                                <div style="float:left; display: none;font-size: 10px;color: rgb(255,0,0);" id="recp">At least one recipient needs to be selected.</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><label>Template</label></td>
+                                    <td>
+                                        <div id="templist" class="newSelect"></div>
+                                            <script type="text/x-handlebars-template" id="templates">
+                                            <div style="float: left;width: 100%;" id="listTemplatesDiv">
+                                                <select id="sms_template" onchange="listTemplates()" class="fldtype1" style="width: 62%;">
+                                                    <option id="none">--None--</option>
+                                                    {{#if obj.data}}
+                                                        {{#each obj.data}}
+                                                            {{#if (equal [twilio.CRM_Module] 'Leads')}}
+                                                            {{#if (checkModule 'Leads')}}
+                                                                <option value={{id}}>{{[Name]}}</option>
+                                                            {{/if}}
+                                                            {{/if}}
+                                                            {{#if (equal [twilio.CRM_Module] 'Contacts')}}
+                                                            {{#if (checkModule 'Contacts')}}
+                                                                <option value={{id}}>{{[Name]}}</option>
+                                                            {{/if}}
+                                                            {{/if}}
+                                                        {{/each}}
+                                                    {{/if}}
+                                                </select>
+                                            </div>
+                                            </script>
+                                        <a href="javascript:void(0)" id="createnew" onclick="addTemp()" style="margin-left:63%; font-size:14px; color:#69A0E8;position: relative;bottom: 27px;"><span style="font-weight:600;">&#65291;</span> New Template </a>
+                                    </td>
+                                </tr>
+                                <tr id="text_msg">
+                                    <td colspan="2">
+                                        <div class="msg-container">
+                                            <div class="msg-header">Message
+                                            </div>
+                                           
+                                            <div class="msg-body">
+                                                <textarea id="msgTxt" style="border: 0px; padding: 5px; width: 588px; height: 105px; margin: 0px; z-index: auto; position: relative; line-height: normal; font-size: 14px; transition: none; background: transparent !important;"></textarea>
+                                            </div>
+                                            <div class="msg-footer" style="padding-bottom:20px;">&nbsp;</div>
+                                            <div style="font-size: 12px;padding-top:3px;"><span class="bold">Note:</span>&nbsp;Maximum 200 characters allowed</div>
+                                            <div class="msg_error" style="color:red;font-size:15px;display:none;">Please enter the message content.</div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <div class="fR">    
+                                            <input type="button" value="Cancel" onclick="closePopUp(true);" class="btn normalbtn cancelbtn">
+                                            <input type="button" value="Send" onclick="sendsms()" class="btn primarybtn sendbtn">
+                                        </div>      
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div id="failureReport"></div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                </div>
+            </form>
+            <div class="error_msg" id="error_msg" style="display:none">
+                <ul style="padding:0; margin:0" id="errors"></ul>
+            </div>
+            <div style="z-index: 999999 " id="statusReport"></div>
+                <script type="text/x-handlebars-template" id="reportScript">
+                <div class="popapul" style="margin-top:-8%;">
+                    <div id="report" style="display:none;">
+                        <div style="background-color: #ffffff"></div>
+                        <div class="head">SMS Summary</div>
+                            <table class="recipients_tbl" border="0" cellpadding="0" cellspacing="0">
+                            <tr class="headerRow">
+                                <th width="20%">
+                                    <div>Name</div>
+                                </th>
+                                <th width="20%">
+                                    <div>From</div>
+                                </th>
+                                <th width="20%">
+                                    <div>To</div>
+                                </th>
+                                <th width="20%">
+                                    <div>Status</div>
+                                </th>
+                                <th width="20%">
+                                    <div>Failure Reason</div>
+                                </th>
+                            </tr>
+                            <tr>
+                                <td colspan="4" style="padding:0;height:3px;border-top: solid 1px #ddd;"></td>
+                            </tr>
+                            {{#each data}}
+                            <tr class="dataRow">
+                                <td>{{Name}}</td>
+                                <td>{{From}}</td>
+                                <td>{{To}}</td>
+                                <td>{{Status}}</td>
+                                <td>{{FailureReason}}</td>
+                            </tr>
+                            {{/each}}
+                            </table>
+                    </div>
+                    <div>
+                        <input type="button" value="Close" class="closebtn save" onclick="closePopUp(true)">
+                    </div>
+            </div>
+            </script> 
+        </div>                                    
+    </div>
+
+    <div class="sms_error" style="display:none;">You can send 50 SMS at a time.</div>
+
+</body>
+</html>
+
+
